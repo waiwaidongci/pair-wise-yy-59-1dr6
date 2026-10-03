@@ -186,6 +186,80 @@ button { cursor: pointer; }
 .summary-note { display: flex; gap: 7px; color: #8d5816; font-size: 11px; padding: 11px; background: #fff5e4; border-radius: 4px; margin-top: 14px; }
 .muted { color: #79858f; font-size: 12px; }
 
+/* ===== 版本与合并回传 ===== */
+.doc-versions { display: block; font-size: 10px; color: #5d7a9d; margin-top: 3px; }
+.merge-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.fail-toggle { display: flex; align-items: center; gap: 6px; font-size: 12px; color: #5d6973; margin-right: 6px; }
+.fail-toggle input { width: auto; }
+.merge-notice { display: flex; align-items: center; gap: 9px; background: #e9f0fd; border: 1px solid #c4d6f3; color: #245bb9; font-size: 12px; padding: 10px 13px; border-radius: 6px; margin-bottom: 16px; }
+.merge-notice button { margin-left: auto; background: transparent; border: 0; color: #245bb9; display: inline-flex; }
+.merge-grid { display: grid; grid-template-columns: 1.35fr 1fr; gap: 16px; align-items: start; }
+.merge-col { display: grid; gap: 16px; }
+.merge-section { display: grid; gap: 12px; }
+.merge-section-title { display: flex; align-items: center; gap: 8px; color: #3b4853; font-size: 13px; }
+.merge-section-title strong { font-size: 13px; }
+.merge-section-title .badge { margin-left: 4px; }
+.batch-merge-card { padding: 14px; }
+.batch-merge-head { display: flex; justify-content: space-between; align-items: center; gap: 10px; flex-wrap: wrap; }
+.batch-merge-title { display: flex; align-items: center; gap: 8px; }
+.batch-merge-meta { font-size: 11px; color: #7a858e; }
+.batch-merge-versions { display: flex; gap: 16px; flex-wrap: wrap; font-size: 11px; color: #68747e; padding: 9px 0; border-bottom: 1px solid #edf0f2; margin-bottom: 9px; }
+.batch-merge-versions b { color: #2c3741; }
+.failed-text { color: var(--red); font-weight: 700; }
+.pending-text { color: var(--amber); font-weight: 700; }
+.batch-items { display: grid; gap: 5px; }
+.batch-item { display: flex; align-items: center; gap: 8px; font-size: 11px; padding: 6px 8px; background: #f6f8fa; border-radius: 4px; }
+.batch-item.failed { background: #fdebec; }
+.batch-item.pending { background: #fff5e4; }
+.batch-item-type { font-weight: 700; color: #496077; min-width: 52px; }
+.batch-item-target { color: #5d6973; }
+.batch-item-fail { display: inline-flex; align-items: center; gap: 4px; color: var(--red); margin-left: auto; }
+.batch-merge-actions { display: flex; gap: 8px; margin-top: 11px; flex-wrap: wrap; }
+.conflict-card { padding: 14px; border-color: #f1c9c9; }
+.conflict-card.decided { border-color: #cfe3d8; }
+.conflict-head { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.conflict-decided-by { font-size: 10px; color: #7a858e; }
+.conflict-parties { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin: 12px 0; }
+.conflict-party { border: 1px solid var(--line); border-radius: 6px; padding: 10px; background: #fafbfc; }
+.conflict-party.center { border-color: #d5dbe0; }
+.conflict-party.offline { border-color: #9cb9ef; background: #f5f8ff; }
+.conflict-party-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px; }
+.conflict-party-head span { font-size: 10px; color: #7a858e; }
+.conflict-party strong { font-size: 12px; display: block; }
+.conflict-party small { font-size: 10px; color: #7a858e; }
+.conflict-party-data { margin: 8px 0 0; font-size: 10px; background: white; border: 1px solid #e7eaed; border-radius: 4px; padding: 7px; white-space: pre-wrap; word-break: break-all; color: #496077; }
+.conflict-actions { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.conflict-note { font-size: 11px; color: #8d5816; display: inline-flex; align-items: center; gap: 5px; }
+.conflict-expand { margin-top: 9px; background: transparent; border: 0; color: #5d7a9d; font-size: 11px; display: inline-flex; align-items: center; gap: 4px; padding: 0; }
+.conflict-sources { margin-top: 8px; border-top: 1px solid #edf0f2; padding-top: 8px; }
+.conflict-sources p { font-size: 11px; color: #5d6973; display: flex; gap: 6px; align-items: flex-start; margin: 5px 0; }
+.review-merge-card { padding: 13px; }
+.review-merge-card.invalidated { border-color: #f1d8af; background: #fffdf7; }
+.review-merge-head { display: flex; align-items: center; gap: 8px; }
+.review-merge-meta { display: flex; flex-direction: column; gap: 2px; font-size: 11px; color: #7a858e; margin: 7px 0; }
+.review-basis { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; background: #f2f6fb; border-radius: 5px; padding: 8px 9px; font-size: 10px; color: #5d6973; }
+.review-basis span { width: 100%; color: #7a858e; }
+.review-basis b { color: #2c3741; }
+.review-basis small { background: white; border: 1px solid #e1e5e8; border-radius: 999px; padding: 2px 7px; }
+.review-invalidated { display: flex; align-items: center; gap: 7px; font-size: 11px; color: #8d5816; margin-top: 8px; flex-wrap: wrap; }
+.review-invalidated .button { margin-left: auto; }
+.review-link { display: block; font-size: 10px; color: #7a858e; margin-top: 6px; }
+.review-snapshot { margin-top: 8px; border-top: 1px solid #edf0f2; }
+.snapshot-row { display: grid; grid-template-columns: 64px 44px 64px 1fr; gap: 6px; font-size: 10px; color: #5d6973; padding: 5px 0; border-bottom: 1px solid #f0f2f4; }
+.review-basis-panel { border: 1px solid #e1e5e8; border-radius: 6px; padding: 10px; margin: 10px 0; background: #fafbfc; }
+.review-basis-panel .card-title { margin-bottom: 8px; }
+.review-basis-row { border-top: 1px solid #edf0f2; padding: 8px 0; display: grid; gap: 3px; }
+.review-basis-row.invalidated { background: #fff8ec; }
+.review-basis-head { display: flex; align-items: center; gap: 7px; }
+.review-basis-row small { font-size: 10px; color: #7a858e; }
+.review-basis-warn { display: flex; align-items: center; gap: 5px; font-size: 10px; color: #8d5816; flex-wrap: wrap; }
+.review-basis-warn .button { margin-left: auto; }
+.review-basis-link { color: #5d7a9d !important; }
+
+@media (max-width: 1100px) {
+  .merge-grid { grid-template-columns: 1fr; }
+}
+
 @media (max-width: 1100px) {
   .document-row { grid-template-columns: 38px minmax(200px, 1fr) 88px 80px 72px; }
   .document-row .doc-field:nth-of-type(3) { display: none; }

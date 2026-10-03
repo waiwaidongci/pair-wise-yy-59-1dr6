@@ -21,7 +21,9 @@ import {
   Eye,
   FileCheck2,
   FileText,
+  GitMerge,
   Highlighter,
+  History,
   Layers3,
   Menu,
   PanelLeftClose,
@@ -36,6 +38,7 @@ import workerUrl from 'pdfjs-dist/build/pdf.worker.min.mjs?url';
 import { PDFDocument, StandardFonts, rgb } from 'pdf-lib';
 import { Badge, Button, Card, Dialog, Tabs, X } from './components/ui';
 import { useDisclosureStore, type DisclosureRecord } from './store';
+import MergeCenterPage from './MergeCenter';
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -53,6 +56,7 @@ function AppShell() {
     { to: '/', label: '文档集', icon: Layers3 },
     { to: '/review/$documentId', label: '去密审阅', icon: Highlighter },
     { to: '/quality', label: '发布质检', icon: ScanSearch },
+    { to: '/merge', label: '合并回传', icon: GitMerge },
     { to: '/batches', label: '批次与标签', icon: Tags }
   ];
   return (
@@ -94,6 +98,7 @@ function AppShell() {
 
 function DocumentsPage() {
   const documents = useDisclosureStore((state) => state.documents);
+  const reviews = useDisclosureStore((state) => state.reviews);
   const { data } = useQuery({ queryKey: ['document-queues'], queryFn: bundleQuery });
   const [filter, setFilter] = useState('全部');
   const visible = filter === '全部' ? documents : documents.filter((doc) => doc.status === filter);
@@ -118,21 +123,27 @@ function DocumentsPage() {
             <span>{visible.length} 份文档</span>
           </div>
           <div className="document-table">
-            {visible.map((doc) => (
+            {visible.map((doc) => {
+              const maxRegionVersion = doc.redactions.reduce((max, r) => Math.max(max, r.regionVersion), 0);
+              const hasConflict = doc.redactions.some((r) => r.conflict);
+              const signedCount = reviews.filter((r) => r.docId === doc.id && r.status === '已签结').length;
+              return (
               <div className="document-row" key={doc.id}>
                 <div className="file-icon"><FileText size={19} /></div>
                 <div className="doc-main">
                   <strong>{doc.title}</strong>
                   <span>{doc.id} · {doc.bundle} · {doc.size}</span>
+                  <span className="doc-versions">文档 v{doc.docVersion} · 区域 v{maxRegionVersion}{signedCount > 0 && ` · 已签 ${signedCount}`}</span>
                 </div>
                 <div className="doc-field"><span>密级</span><Badge tone={doc.classification === '严格机密' ? 'red' : doc.classification === '机密' ? 'amber' : 'neutral'}>{doc.classification}</Badge></div>
                 <div className="doc-field"><span>负责人员</span><strong>{doc.owner}</strong></div>
-                <div className="doc-field"><span>状态</span><Badge tone={doc.status === '可发布' ? 'green' : doc.status === '待质检' ? 'amber' : 'blue'}>{doc.status}</Badge></div>
+                <div className="doc-field"><span>状态</span><Badge tone={doc.status === '可发布' ? 'green' : doc.status === '待质检' ? 'amber' : 'blue'}>{doc.status}</Badge>{hasConflict && <Badge tone="red">冲突待裁决</Badge>}</div>
                 <div className="doc-actions">
                   <Link to="/review/$documentId" params={{ documentId: doc.id }}><Button variant="outline">审阅</Button></Link>
                 </div>
               </div>
-            ))}
+              );
+            })}
           </div>
         </Card>
         <aside className="side-stack">
@@ -369,19 +380,35 @@ function QualityPage() {
       </div>
       <div className="quality-bottom">
         <Card className="checks-card"><div className="card-title"><ClipboardCheck size={17} /><strong>发布前校验项</strong></div>{checks.map((check) => <button className="check-row" key={check.id} onClick={() => store.toggleReviewCheck(check.id)}><span className={store.reviewChecks[check.id] ? 'checked' : ''}>{store.reviewChecks[check.id] && <Check size={13} />}</span><div><strong>{check.label}</strong><small>{check.detail}</small></div></button>)}</Card>
-        <Card className="decision-card"><div className="card-title"><ShieldCheck size={17} /><strong>复核结论</strong></div><p>本批次共有 <b>{doc.redactions.length}</b> 个去密区域，其中已确认 {doc.redactions.filter((item) => item.status === 'confirmed').length} 个。</p><label><input type="checkbox" checked={store.metadataCleaned} onChange={store.toggleMetadata} /> 已确认元数据清理</label><div className="decision-actions"><Button variant="outline"><ArrowLeft size={15} /> 退回补件</Button><Button disabled={!store.metadataCleaned || Object.values(store.reviewChecks).some((value) => !value)} onClick={store.markReady}><Check size={15} /> 通过并标记可发布</Button></div></Card>
+        <Card className="decision-card"><div className="card-title"><ShieldCheck size={17} /><strong>复核结论</strong></div><p>本批次共有 <b>{doc.redactions.length}</b> 个去密区域，其中已确认 {doc.redactions.filter((item) => item.status === 'confirmed').length} 个。</p>
+          <div className="review-basis-panel">
+            <div className="card-title"><History size={17} /><strong>复核依据与版本</strong></div>
+            {store.reviews.filter((r) => r.docId === doc.id).map((r) => (
+              <div key={r.id} className={`review-basis-row ${r.status === '已失效' ? 'invalidated' : r.status === '已签结' ? 'signed' : ''}`}>
+                <div className="review-basis-head"><strong>{r.reviewNo}</strong><Badge tone={r.status === '已签结' ? 'green' : r.status === '已失效' ? 'amber' : 'blue'}>{r.status}</Badge>{r.legacy && <Badge tone="neutral">历史补录</Badge>}</div>
+                <small>依据：文档 v{r.basis.docVersion} · 密级 {r.basis.classification} · 区域 {r.basis.regionCount} 个</small>
+                {r.status === '已签结' && <small>签署于 {r.signedAt}，当时依据已封存保留。</small>}
+                {r.status === '已失效' && <span className="review-basis-warn"><AlertTriangle size={12} /> 已于 {r.invalidatedAt} 因中心区域/密级变更失效，已按新内容重算为 {r.recalculatedTo ? '新复核' : '…'}。{!r.recalculatedTo && <Button variant="outline" onClick={() => store.recalculateReview(r.id)}>按新内容重算</Button>}</span>}
+                {r.recalculatedFrom && <small className="review-basis-link">重算来源：{r.recalculatedFrom}</small>}
+              </div>
+            ))}
+          </div>
+          <label><input type="checkbox" checked={store.metadataCleaned} onChange={store.toggleMetadata} /> 已确认元数据清理</label><div className="decision-actions"><Button variant="outline"><ArrowLeft size={15} /> 退回补件</Button><Button disabled={!store.metadataCleaned || Object.values(store.reviewChecks).some((value) => !value)} onClick={store.markReady}><Check size={15} /> 通过并标记可发布</Button></div></Card>
       </div>
     </div>
   );
 }
 
 function BatchesPage() {
-  const { documents } = useDisclosureStore();
+  const { documents, conflicts } = useDisclosureStore();
   const [selected, setSelected] = useState<string[]>(['DOC-00418']);
   const activeDoc = documents.find((doc) => doc.id === selected[0]) ?? documents[0];
+  const pendingConflicts = conflicts.filter((c) => c.status === '待裁决');
+  const blocked = pendingConflicts.length > 0;
   return (
     <div className="page">
-      <header className="page-heading"><div><small>RELEASE BATCH / TAXONOMY</small><h1>发布批次与标签</h1><p>按案件问题、辖区和披露对象组织文档，生成可追溯发布清单。</p></div><Button>生成发布包</Button></header>
+      <header className="page-heading"><div><small>RELEASE BATCH / TAXONOMY</small><h1>发布批次与标签</h1><p>按案件问题、辖区和披露对象组织文档，生成可追溯发布清单。</p></div><Button disabled={blocked}>{blocked ? '存在未裁决冲突' : '生成发布包'}</Button></header>
+      {blocked && <div className="merge-notice"><AlertTriangle size={15} /><span>有 {pendingConflicts.length} 项区域/密级冲突未逐项裁决，裁决前不能进入发布批次。</span></div>}
       <div className="batch-layout">
         <Card className="batch-list"><div className="card-title"><Layers3 size={17} /><strong>发布批次</strong></div>{['第一批披露 · 审阅中', '第二批披露 · 编制中', '专家材料 · 待补充'].map((name, index) => <button key={name} className={index === 0 ? 'active' : ''}><span>BATCH-{String(index + 1).padStart(2, '0')}</span><strong>{name}</strong><small>{[48, 79, 19][index]} 份文档</small></button>)}</Card>
         <Card className="batch-content">
@@ -391,7 +418,7 @@ function BatchesPage() {
           </div>
           <div className="tag-editor"><h3>标签与分发级</h3><div className="tag-options">{(['合同问题', '设备缺陷', '现场安全', '损害赔偿', '仅律师可见']).map((tag, index) => <span key={tag} className={index < 3 ? 'selected' : ''}>{tag}</span>)}</div><label>导出清单说明<textarea defaultValue="按案卷编号升序导出，保留去密版本、操作者与审批时间。" /></label><Button>保存批次设置</Button></div>
         </Card>
-        <Card className="batch-summary"><div className="side-label">当前批次摘要</div><strong>{activeDoc.bundle}</strong><dl><div><dt>文档</dt><dd>{selected.length}</dd></div><div><dt>页数</dt><dd>{selected.reduce((sum, id) => sum + (documents.find((doc) => doc.id === id)?.pages ?? 0), 0)}</dd></div><div><dt>风险项</dt><dd>4</dd></div></dl><div className="summary-note"><AlertTriangle size={15} /><span>发布前仍需完成 4 项双人复核。</span></div></Card>
+        <Card className="batch-summary"><div className="side-label">当前批次摘要</div><strong>{activeDoc.bundle}</strong><dl><div><dt>文档</dt><dd>{selected.length}</dd></div><div><dt>页数</dt><dd>{selected.reduce((sum, id) => sum + (documents.find((doc) => doc.id === id)?.pages ?? 0), 0)}</dd></div><div><dt>风险项</dt><dd>4</dd></div><div><dt>版本</dt><dd>文档 v{activeDoc.docVersion}</dd></div></dl><div className="summary-note"><AlertTriangle size={15} /><span>{blocked ? `存在 ${pendingConflicts.length} 项未裁决冲突，裁决后才能生成发布包。` : '发布前仍需完成 4 项双人复核。'}</span></div></Card>
       </div>
     </div>
   );
@@ -401,8 +428,9 @@ const rootRoute = createRootRoute({ component: AppShell });
 const documentsRoute = createRoute({ getParentRoute: () => rootRoute, path: '/', component: DocumentsPage });
 const reviewRoute = createRoute({ getParentRoute: () => rootRoute, path: '/review/$documentId', component: ReviewPage });
 const qualityRoute = createRoute({ getParentRoute: () => rootRoute, path: '/quality', component: QualityPage });
+const mergeRoute = createRoute({ getParentRoute: () => rootRoute, path: '/merge', component: MergeCenterPage });
 const batchesRoute = createRoute({ getParentRoute: () => rootRoute, path: '/batches', component: BatchesPage });
-const routeTree = rootRoute.addChildren([documentsRoute, reviewRoute, qualityRoute, batchesRoute]);
+const routeTree = rootRoute.addChildren([documentsRoute, reviewRoute, qualityRoute, mergeRoute, batchesRoute]);
 const router = createRouter({ routeTree });
 
 declare module '@tanstack/react-router' {
